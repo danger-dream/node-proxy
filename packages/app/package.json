@@ -1,0 +1,42 @@
+{
+	"name": "node-proxy",
+	"version": "0.0.1",
+	"license": "MIT",
+	"author": "hlxxzt",
+	"main": "src/index.ts",
+	"types": "types.d.ts",
+	"scripts": {
+		"build": "tsc",
+		"watch": "tsc --watch",
+		"start": "tsc && node dist/src/index.js -d -s -c -h 127.0.0.1 -k 123 --local",
+		"start-ts": "ts-node src/index.ts -d -s -c -h 127.0.0.1 -k 123 --local",
+		"start-ts-help": "ts-node src/index.ts --help",
+		"start-ts-server": "ts-node src/index.ts -s --local",
+		"start-ts-client": "ts-node src/index.ts -c -h 127.0.0.1 -k 123"
+	},
+	"engines": {
+		"node": ">=16.0.0"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://www.github.com/hlxxzt/node-proxy.git",
+		"directory": "packages/app"
+	},
+	"bugs": {
+		"url": "https://www.github.com/hlxxzt/node-proxy/issues"
+	},
+	"homepage": "https://www.github.com/hlxxzt/node-proxy/packages/app#readme",
+	"dependencies": {
+		"alasql": "1.7.3",
+		"express": "4.17.2",
+		"maxmind": "4.3.4",
+		"optionator": "0.9.1"
+	},
+	"devDependencies": {
+		"@types/node": "16.11.19",
+		"ts-node": "10.4.0",
+		"typescript": "4.5.4",
+		"@types/express": "4.17.13",
+		"@types/ws": "8.2.2"
+	}
+}

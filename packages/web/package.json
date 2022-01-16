@@ -1,0 +1,35 @@
+{
+	"name": "proxy-web",
+	"version": "0.0.1",
+	"license": "MIT",
+	"author": "hlxxzt",
+	"scripts": {
+		"dev": "vite",
+		"build": "vite build"
+	},
+	"engines": {
+		"node": ">=16.0.0"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://www.github.com/hlxxzt/node-proxy.git",
+		"directory": "packages/proxy-web"
+	},
+	"bugs": {
+		"url": "https://www.github.com/hlxxzt/node-proxy/issues"
+	},
+	"homepage": "https://www.github.com/hlxxzt/node-proxy/packages/proxy-web#readme",
+	"dependencies": {
+		"element-plus": "1.2.0-beta.6",
+		"vue": "3.2.26",
+		"axios": "0.24.0",
+		"@element-plus/icons-vue": "0.2.4"
+	},
+	"devDependencies": {
+		"@vitejs/plugin-vue": "2.0.1",
+		"typescript": "4.5.4",
+		"vite": "2.7.10",
+		"vue-tsc": "0.30.2",
+		"sass": "1.47.0"
+	}
+}
