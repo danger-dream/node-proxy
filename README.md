@@ -49,15 +49,15 @@ yarn && yarn build
 ```bash
 Usage: node-proxy [options]
 
-  --help                            Displays help
-  --local                           Profile in the local
-  -d, --daemon                      Use daemon - default: false
-  -c, --client                      client mode
-  -s, --server                      server mode
-  -P, --port Int                    Web listen port, client mode ignored - default: 80
-  -p, --proxy-server-port   Int     Proxy server listen port - default: 6900
-  -h, --proxy-server-host   String  Proxy server host, server mode ignored
-  -k, --key                 String  Proxy server auth key, server mode ignored
+  --help            Displays help
+  --local           Profile in the local
+  -d, --daemon      Use daemon - default: false
+  -c, --client      client mode
+  -s, --server      server mode
+  -P, --port Int    Web listen port, client mode ignored - default: 80
+  -p, --proxy-server-port Int  Proxy server listen port - default: 6900
+  -h, --proxy-server-host String  Proxy server host, server mode ignored
+  -k, --key String  Proxy server auth key, server mode ignored
 
 Version:0.0.1
 
