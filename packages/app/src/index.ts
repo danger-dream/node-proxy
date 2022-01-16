@@ -53,7 +53,6 @@ if (cluster.isPrimary){
 				}
 			})
 		}
-		console.log(process.cwd())
 		args.server && start(true)
 		if (args.server && args.client){
 			setTimeout(function(){
