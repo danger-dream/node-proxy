@@ -18,7 +18,7 @@ const configure = [
 		name: 'localhost',
 		key: '123',
 		proxyMappings: [
-			{ id: Date.now(), name: 'baidu', lan: '127.0.0.1:3389', inetPort: 2048, enable: true }
+			{ id: Date.now(), name: 'test-tcp', lan: '127.0.0.1:12345', inetPort: 2048, enable: true }
 		],
 		status: true
 	}

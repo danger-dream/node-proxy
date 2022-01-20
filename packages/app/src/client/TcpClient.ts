@@ -2,6 +2,7 @@ import { EventEmitter } from 'events'
 import { Socket } from 'net'
 import BufferHandle, { makeData } from '../common/BufferHandle'
 import MsgType from '../common/MsgType'
+import { decrypt, encrypt } from '../common/ProxyCrypto'
 
 // noinspection DuplicatedCode
 export default class tcpClient extends EventEmitter {
@@ -45,16 +46,16 @@ export default class tcpClient extends EventEmitter {
 	
 	handleNativeData(buf: Buffer){
 		if (!Buffer.isBuffer(buf)) return
-		if (this.formatMsg){
-			try {
-				const res = JSON.parse(buf.toString('utf8'))
-				if (res.data !== undefined && res.type !== undefined){
-					this.emit('receive', res)
-				}
-			}catch {}
-		}else {
-			this.emit('data', buf)
-		}
+		try {
+			const deBuf = decrypt(buf)
+			if (!deBuf){
+				return
+			}
+			const res = JSON.parse(deBuf.toString('utf8'))
+			if (res.data !== undefined && res.type !== undefined){
+				this.emit('receive', res)
+			}
+		}catch {}
 	}
 	
 	write(type: Buffer | MsgType, data?: any): void {
@@ -65,7 +66,7 @@ export default class tcpClient extends EventEmitter {
 				if (!data) {
 					data = Date.now()
 				}
-				this.socket.write(makeData(Buffer.from(JSON.stringify({ type, data }))))
+				this.socket.write(makeData(encrypt(JSON.stringify({ type, data }))))
 			}
 		}catch {}
 	}

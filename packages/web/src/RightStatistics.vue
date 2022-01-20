@@ -123,7 +123,7 @@
 					<el-table-column label="下载" align="center" width="80">
 						<template #default="{ row }">{{ bytesToSize(row.down) }}</template>
 					</el-table-column>
-					<el-table-column label="连接时间" align="center" width="140">
+					<el-table-column label="连接时间" align="center" width="150">
 						<template #default="{ row }">
 							<template v-if='row.timestamp'>
 								<span v-if='row.status'>{{ calcTime(row.timestamp) }}</span>
@@ -151,7 +151,7 @@
 					<el-table-column type='index' align='center' width='55'></el-table-column>
 					<el-table-column prop='address' label="地址" width='80'></el-table-column>
 					<el-table-column prop='ip' label="IP"></el-table-column>
-					<el-table-column label="添加时间" align="center" width="140">
+					<el-table-column label="添加时间" align="center" width="150">
 						<template #default="{ row }">{{ formatTime(row.time) }}</template>
 					</el-table-column>
 					<el-table-column label="操作" align="center" width="100">

@@ -1,11 +1,26 @@
 import axios from "axios";
 import { IConfigure, ISystem, IBlack, IMetrics, IMetricsIP } from '../types'
 
+function getQueryVariable(variable: string): string {
+	const query = window.location.search.substring(1);
+	const vars = query.split("&");
+	for (const item of vars){
+		const pair = item.split("=")
+		if (pair[0] === variable)
+			return pair[1]
+	}
+	return ''
+}
+
+const token = getQueryVariable('token')
+if (!token){
+	window.close()
+}
 
 async function post(uri: string, params: any = {}): Promise<any>{
 	const res = await axios({
 		method: 'POST',
-		url: '/api' + uri,
+		url: '/api' + uri + '?token=' + token,
 		data: typeof params === 'string' ? params : JSON.stringify(params || {}),
 		headers: {
 			'content-type': 'text/plain'

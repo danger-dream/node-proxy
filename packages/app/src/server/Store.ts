@@ -1,4 +1,4 @@
-import { readFileSync, writeFileSync } from 'fs'
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs'
 import { join } from 'path'
 import JSONStore from '../common/JSONStore'
 import { IBlack, IConfigure, ISystem } from '../../types'
@@ -7,11 +7,13 @@ import UserProxyServer from './UserProxyServer'
 import { Server } from 'net'
 import Metrics from './Metrics'
 import { init, ip2region } from '../common/ip2region'
+import { UUID } from '../common/Utils'
 
 const storePath = join(process.argv.includes('--local') ? process.cwd() : process.env.HOME || process.cwd(), '.node-proxy')
 const systemPath = join(storePath, '.sys')
 
 export default class Store {
+	token = ''
 	configure = JSONStore.create<IConfigure>('configure', storePath)
 	black = JSONStore.create<IBlack>('black', storePath)
 	system: ISystem = { enable: true, overseas: false, timeout: 30 }
@@ -27,6 +29,21 @@ export default class Store {
 	userClientMap = {} as Record<string, TcpServerClient>
 	
 	constructor() {
+		if (!existsSync(storePath)){
+			mkdirSync(storePath)
+		}
+		try {
+			const tokenFile = join(storePath, '.token')
+			if (!existsSync(tokenFile)){
+				this.token = UUID() + UUID() + UUID() + UUID() + UUID()
+				writeFileSync(tokenFile, this.token)
+			}else {
+				this.token = readFileSync(tokenFile).toString()
+			}
+		}catch {
+			console.log('获取token失败')
+			process.exit(0)
+		}
 		try {
 			Object.assign(this.system, JSON.parse(readFileSync(systemPath).toString()))
 		}catch {}

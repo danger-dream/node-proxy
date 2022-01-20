@@ -1,6 +1,6 @@
 {
 	"name": "node-proxy",
-	"version": "0.0.1",
+	"version": "0.0.2",
 	"license": "MIT",
 	"author": "hlxxzt",
 	"main": "src/index.ts",

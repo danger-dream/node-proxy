@@ -3,6 +3,7 @@ import { Socket } from 'net'
 import { UUID } from '../common/Utils'
 import BufferHandle, { makeData } from '../common/BufferHandle'
 import MsgType from '../common/MsgType'
+import { decrypt, encrypt } from '../common/ProxyCrypto'
 
 export class TcpServerClient extends EventEmitter {
 	public id: string = UUID()
@@ -46,7 +47,11 @@ export class TcpServerClient extends EventEmitter {
 	
 	onMsg(buf: Buffer){
 		try {
-			const res = JSON.parse(buf.toString('utf8'))
+			const deBuf = decrypt(buf)
+			if (!deBuf){
+				return
+			}
+			let res = JSON.parse(deBuf.toString('utf8'))
 			if (res.data !== undefined && res.type !== undefined){
 				this.emit('receive', res)
 			}
@@ -63,7 +68,7 @@ export class TcpServerClient extends EventEmitter {
 				if (!data) {
 					data = Date.now()
 				}
-				const temp = makeData(Buffer.from(JSON.stringify({ type, data })))
+				const temp = makeData(encrypt(JSON.stringify({ type, data })))
 				this.emit('write', temp.length)
 				this.socket.write(temp)
 			}

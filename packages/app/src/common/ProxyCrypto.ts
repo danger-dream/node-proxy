@@ -1,18 +1,13 @@
-
+const key = '$&cOOpldfo1EYLW1$$I*r!pOu!1ddwkvVHv$%(8f2(*^7823bc$6213d{dwecv='
 const ord = [];
 for (let i = 1; i <= 255; i++) {
 	ord[String.fromCharCode(i)] = i
 }
 
-export function encrypt(input: string | Buffer, key: string, randomKey: boolean): Buffer {
-	let newKey = key
-	let sk = ''
-	let ek = ''
-	if (randomKey){
-		sk = (((1 + Math.random()) * 0x10000) | 0).toString(16).substring(1)
-		ek = (((1 + Math.random()) * 0x10000) | 0).toString(16).substring(1)
-		newKey = sk + key + ek
-	}
+export function encrypt(input: string | Buffer): Buffer {
+	let sk = (((1 + Math.random()) * 0x10000) | 0).toString(16).substring(1)
+	let ek = (((1 + Math.random()) * 0x10000) | 0).toString(16).substring(1)
+	const newKey = sk + key + ek
 	const buf = Buffer.from(JSON.stringify({ data: Buffer.from(input).toString('base64') }))
 	const res = [] as any[];
 	for (let i = 0; i < buf.length; i++){
@@ -22,13 +17,9 @@ export function encrypt(input: string | Buffer, key: string, randomKey: boolean)
 	return Buffer.concat([Buffer.from(sk), Buffer.from(res), Buffer.from(ek)]);
 }
 
-export function decrypt(buf: Buffer, key: string, randomKey: boolean): Buffer | undefined {
-	let sk = ''
-	let ek = ''
-	if (randomKey){
-		sk = buf.subarray(0, 4).toString()
-		ek = buf.subarray(buf.length - 4).toString()
-	}
+export function decrypt(buf: Buffer): Buffer | undefined {
+	let sk = buf.subarray(0, 4).toString()
+	let ek = buf.subarray(buf.length - 4).toString()
 	buf = buf.subarray(4, buf.length - 4)
 	const newKey = sk + key + ek
 	const res = [] as any[];

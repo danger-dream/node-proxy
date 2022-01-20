@@ -13,7 +13,7 @@ function runProxy (args: RunArgs, server: boolean) {
 	}
 }
 
-if (cluster.isPrimary){
+if (cluster['isMaster'] || cluster.isPrimary){
 	const optionator = Optionator({
 		prepend: `Usage: ${ pkg.name } [options]`,
 		append: 'Version:' + pkg.version,
@@ -33,7 +33,7 @@ if (cluster.isPrimary){
 		console.log(optionator.generateHelp())
 		process.exit()
 	}
-	const args = optionator.parseArgv(process.argv) as RunArgs
+	const args = optionator.parseArgv(process.argv.includes('--project') ? process.argv.slice(2) : process.argv) as RunArgs
 	if (!args.client && !args.server){
 		args.server = true
 	}

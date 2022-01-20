@@ -3,7 +3,7 @@ import type { IConfigure, IBlack, RunArgs } from '../../types'
 import ProxyServer from './ProxyServer'
 import Store from './Store'
 
-export default function(app: Express, args: RunArgs){
+export default function(app: Express, args: RunArgs, store: Store){
 
 	function registerApi(path: string, handlers: (body: any) => any, json: boolean = false): void {
 		app.post('/api' + path, function(req, res){
@@ -29,7 +29,6 @@ export default function(app: Express, args: RunArgs){
 		})
 	}
 	
-	const store = new Store()
 	const proxyServer = new ProxyServer(args.proxyServerPort, store)
 	
 	registerApi('/configure', () => store.configure.query())

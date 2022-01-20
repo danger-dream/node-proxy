@@ -1,7 +1,6 @@
 const fs = require('fs')
-const { join, dirname } = require('path')
+const { join } = require('path')
 const rimraf = require('rimraf')
-const pkg = require('pkg')
 
 const app = join(__dirname, '../packages/app/dist/src')
 const web = join(__dirname, '../packages/web/dist')
@@ -38,4 +37,6 @@ copyFolder(app, dist)
 const webDist = join(dist, 'dist')
 fs.mkdirSync(webDist)
 copyFolder(web, webDist)
-rimraf.sync(join(__dirname, '../build'))
+rimraf.sync(app)
+rimraf.sync(web)
+
