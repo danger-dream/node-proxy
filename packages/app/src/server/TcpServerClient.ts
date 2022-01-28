@@ -17,12 +17,6 @@ export class TcpServerClient extends EventEmitter {
 		const self = this
 		const handle = BufferHandle(this.onMsg.bind(this))
 		
-		let interval = setInterval(function(){
-			if (Date.now() - self.communicationTime > 60 * 1000){
-				self.close()
-			}
-		}, 1000 * 10)
-		
 		socket.on('data', (buf) => {
 			try {
 				self.communicationTime = Date.now()
@@ -39,7 +33,6 @@ export class TcpServerClient extends EventEmitter {
 			if (self.closeTimeout){
 				clearTimeout(self.closeTimeout)
 			}
-			clearInterval(interval)
 			self.emit('close')
 		})
 		

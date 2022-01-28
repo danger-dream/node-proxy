@@ -8,10 +8,10 @@
 	"scripts": {
 		"build": "tsc",
 		"watch": "tsc --watch",
-		"start": "tsc && node dist/src/index.js -d -s -c -h 127.0.0.1 -k 123 --local",
-		"start-ts": "ts-node src/index.ts -d -s -c -h 127.0.0.1 -k 123 --local",
+		"start": "tsc && node dist/src/index.js -d -s -c -h 127.0.0.1 -k 123",
+		"start-ts": "ts-node src/index.ts -d -s -c -h 127.0.0.1 -k 123",
 		"start-ts-help": "ts-node src/index.ts --help",
-		"start-ts-server": "ts-node src/index.ts -s --local",
+		"start-ts-server": "ts-node src/index.ts -s",
 		"start-ts-client": "ts-node src/index.ts -c -h 127.0.0.1 -k 123"
 	},
 	"engines": {

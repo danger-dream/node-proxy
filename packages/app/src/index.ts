@@ -19,7 +19,6 @@ if (cluster['isMaster'] || cluster.isPrimary){
 		append: 'Version:' + pkg.version,
 		options: [
 			{ option: 'help', type: 'Boolean', description: 'Displays help' },
-			{ option: 'local', type: 'Boolean', description: 'Profile in the local' },
 			{ option: 'daemon', alias: 'd', type: 'Boolean', default: 'false', description: 'Use daemon' },
 			{ option: 'client', alias: 'c', type: 'Boolean', description: 'client mode' },
 			{ option: 'server', alias: 's', type: 'Boolean', description: 'server mode' },

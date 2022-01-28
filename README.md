@@ -50,7 +50,6 @@ yarn && yarn build
 Usage: node-proxy [options]
 
   --help            Displays help
-  --local           Profile in the local
   -d, --daemon      Use daemon - default: false
   -c, --client      client mode
   -s, --server      server mode

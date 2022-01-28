@@ -9,7 +9,7 @@ import Metrics from './Metrics'
 import { init, ip2region } from '../common/ip2region'
 import { UUID } from '../common/Utils'
 
-const storePath = join(process.argv.includes('--local') ? process.cwd() : process.env.HOME || process.cwd(), '.node-proxy')
+const storePath = join(process.cwd(), '.node-proxy')
 const systemPath = join(storePath, '.sys')
 
 export default class Store {
@@ -40,6 +40,7 @@ export default class Store {
 			}else {
 				this.token = readFileSync(tokenFile).toString()
 			}
+			console.log(`token: ${ this.token }`)
 		}catch {
 			console.log('获取token失败')
 			process.exit(0)

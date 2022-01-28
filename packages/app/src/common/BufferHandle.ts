@@ -17,20 +17,30 @@ class BufferHandle {
 		let curBuf = Buffer.from(data)
 		while (true){
 			const buf = this.cache = this.cache ? Buffer.concat([this.cache, curBuf]) : curBuf
-			let length = buf.readInt32LE()
-			if (buf.length < length) {
-				this.cache = buf
-				return
+			try {
+				if (buf.length < 4) return
+				let length = buf.readInt32LE()
+				if (buf.length < length) {
+					return
+				}
+				let temp = Buffer.alloc(length - headerLength)
+				buf.copy(temp, 0, headerLength, length)
+				this.msgReceiveFn(temp)
+				this.cache = undefined
+				let slength = buf.length - length
+				if (slength < 1)
+					return
+				curBuf = Buffer.alloc(slength)
+				buf.copy(curBuf, 0, length, buf.length)
+			}catch (e) {
+				console.log(
+					'解包出错了, buf:' + buf.length +
+					', start:' + (buf.length > 0 ? buf : 'empty') +
+					', cache:' + this.cache!.length +
+					', curBuf,' + curBuf.length
+				)
+				throw e
 			}
-			let temp = Buffer.alloc(length - headerLength)
-			buf.copy(temp, 0, headerLength, length)
-			this.msgReceiveFn(temp)
-			this.cache = undefined
-			let slength = buf.length - length
-			if (slength < 1)
-				return
-			curBuf = Buffer.alloc(slength)
-			buf.copy(curBuf, 0, length, buf.length)
 		}
 	}
 }
