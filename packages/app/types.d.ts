@@ -56,7 +56,6 @@ export declare interface IBlack {
 }
 
 export declare interface IProxyMapping {
-	name: string
 	inetPort: number
 	lan: string
 	enable: boolean

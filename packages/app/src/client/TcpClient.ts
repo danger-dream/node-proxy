@@ -19,9 +19,7 @@ export default class tcpClient extends EventEmitter {
 			const self = this
 			const bufferHandle = BufferHandle(this.handleNativeData.bind(this))
 			this.socket = new Socket()
-			this.socket.connect(this.port, this.host, () => {
-				self.emit('ready')
-			}).
+			this.socket.connect(this.port, this.host, () => self.emit('ready')).
 			on('data', buf => {
 				if (self.formatMsg){
 					bufferHandle.putData(buf)

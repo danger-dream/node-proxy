@@ -28,16 +28,14 @@ export default function(args: RunArgs){
 	let auth = false
 	let first = true
 	let heartbeat = -1 as any
-	client.onReady(() => {
-		client.write(MsgType.auth, args.key)
-	})
+	client.onReady(() => client.write(MsgType.auth, args.key))
 	client.onReceive(function(msg){
 		if (msg.type === MsgType.auth) {
 			auth = true
 			first = false
 			heartbeat = setInterval(function(){
 				client.write(MsgType.heartbeat)
-			}, 30 * 1000)
+			}, 15 * 1000)
 			console.log('连接代理服务端成功')
 		}
 		else if (msg.type === MsgType.connect){

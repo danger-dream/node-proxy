@@ -35,14 +35,14 @@ export default function(app: Express, args: RunArgs, store: Store){
 	
 	registerApi('/configure/save', function(body: IConfigure): boolean {
 		const res = (body.id ? store.configure.update(body) : store.configure.insert(body)) > 0
-		res && store.changeConfigure()
+		store.changeConfigure()
 		return res
 	}, true)
 	
 	registerApi('/configure/remove', function(id: number): any {
 		if (id === undefined || id < 1) return false
 		const res = store.configure.remove(parseInt(id + ''))
-		res && store.changeConfigure()
+		store.changeConfigure()
 		return res
 	})
 	
@@ -59,16 +59,19 @@ export default function(app: Express, args: RunArgs, store: Store){
 	
 	registerApi('/system/update', (body) => store.setSystem(body), true)
 	
-	registerApi('/status/configure', function(){
-		return Object.keys(store.proxyClientMap).map(x => {
-			return { id: parseInt(x), address: store.proxyClientMap[x]!.socket.remoteAddress }
+	registerApi('/status', function(){
+		const ups = Object.keys(store.proxyServerMap).map(x => parseInt(x))
+		const clients = Object.keys(store.proxyClientMap).map(x => {
+			const ip = store.proxyClientMap[x]!.socket.remoteAddress
+			return { id: parseInt(x), address: ip, region: store.getIpRegionAddress(ip) }
 		})
+		return { ups, clients, conn: store.connect.getConnList() }
 	})
 	
-	registerApi('/status/metrics', () => store.metrics.getMetricsTree())
+	registerApi('/statusAll', function(){
+		return store.connect.getAll()
+	})
 	
-	registerApi('/status/metricsIp', () => store.metrics.getMetricsIdTree())
-
 	registerApi('/forceClose', (id: string) => store.userProxyServer.closeClient(id))
 	
 	proxyServer.start()

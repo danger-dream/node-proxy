@@ -16,10 +16,10 @@ export default function(args: RunArgs){
 		res.header('Access-Control-Allow-Origin', '*')
 		res.header("Access-Control-Allow-Headers", "*");
 		res.header('Access-Control-Allow-Methods', 'POST,GET,OPTIONS')
-		const p = new URL(`http://${ req.socket.remoteAddress + ":" + req.socket.remotePort }${req.url}`)
 		const token = req.params['token'] || req.query['token'] || req.headers['token']
 		if (req.method === 'GET'){
-			if (p.pathname === '/' && token !== store.token){
+			const url = new URL(`http://localhost${req.url}`)
+			if (url.pathname === '/' && token !== store.token){
 				res.end('token invalid')
 				return
 			}

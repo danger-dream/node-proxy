@@ -1,80 +1,92 @@
 <script setup lang="ts">
-import {nextTick, onMounted, reactive, ref, computed} from 'vue'
-import { IConfigure, IProxyMappingInfo } from "../types"
+import {onMounted, reactive} from 'vue'
 import {ElMessage} from "element-plus"
+import { Link } from '@element-plus/icons-vue'
+import {IBlack, IConfigure, IConnect, IProxyItem, IProxyMappingInfo} from "../types"
 import Api from './Api'
-import RightStatistics from './RightStatistics.vue'
-import {confirm, prompt} from './Utils'
-
-const nameRef = ref<any>(null)
-const tableRef = ref<any>(null)
+import {confirm, prompt, formatTime, bytesToSize, calcTime} from './Utils'
+import ConnectView from './Connect.vue'
+import BlackView from './Black.vue'
 
 const StartPort = 2048
 const state = reactive({
-	activeName: 'lan',
-	form: { id: 0, name: '', lan: '', inetPort: 0, configureId: 0, enable: true } as IProxyMappingInfo,
-	list: [] as IProxyMappingInfo[],
+	activeName: 'proxy',
+	form: { id: 0, info: '', lan: '', inetPort: 0, configureId: undefined, enable: true  } as IProxyMappingInfo,
+	list: [] as IProxyItem[],
 	configures: [] as IConfigure[],
-	config: undefined as IConfigure | undefined
+	dialogVisible: false,
+	ups: [] as number[],
+	black: [] as IBlack[]
 })
 
-function onCancel() {
-	let curPort =  StartPort
+
+function getPort(s?: number){
+	let curPort =  s === undefined ? StartPort : s
 	for (let i = StartPort; i < 65535; i++){
-		if (!state.list.find(x => x.inetPort === i)){
+		if (!state.configures.map(x => x.proxyMappings).flat().find(x => x.inetPort === i)){
 			curPort = i
 			break
 		}
 	}
-	state.form = { id: 0, name: '', lan: '', inetPort: curPort, configureId: 0, enable: true }
+	return curPort
+}
+
+function onCancel() {
+	state.form = { id: 0, info: '', lan: '', inetPort: getPort(), configureId: undefined, enable: true }
 }
 
 async function reloadClient() {
 	onCancel()
-	state.config = undefined
+	state.black = await Api.black.list()
 	state.configures = await Api.configure.list()
-	let list = [] as IProxyMappingInfo[]
+	let list = [] as IProxyItem[]
 	for (const cfg of state.configures){
 		for (const item of cfg.proxyMappings){
-			list.push(Object.assign({ configureId: cfg.id! }, item))
+			const obj = {
+				id: item.id, conf: cfg, children: [],
+				map: Object.assign({ configureId: cfg.id! }, item)
+			} as IProxyItem
+			list.push(obj)
 		}
 	}
-	state.list = list.sort((a: IProxyMappingInfo, b: IProxyMappingInfo) => {
-		if (a.enable === b.enable){
-			if (a.configureId === b.configureId){
-				return a.inetPort - b.inetPort
-			}
-			return a.configureId - b.configureId
-		}else {
-			return (b.enable ? 1 : 0) - (a.enable ? 1 : 0)
+	state.list = list.sort((a, b) => {
+		if (a.map!.configureId === b.map!.configureId){
+			return (b.map!.enable ? 1 : 0) - (a.map!.enable ? 1 : 0)
 		}
+		return a.map!.configureId! - b.map!.configureId!
 	})
 	await reloadConfigureStatus()
 }
 
-const filterList = computed(() => {
-	if (state.config){
-		return state.list.filter(x => x.configureId === state.config!.id)
-	}
-	return state.list
-})
-
 async function reloadConfigureStatus(){
-	for (const item of state.configures){
-		item.status = false
-	}
-	const res = await Api.status.configure()
-	for (const item of res){
-		const cfg = state.configures.find(x => x.id === item.id)
-		if (!cfg) continue
-		cfg.status = true
-		cfg.address = item.address
+	try {
+		const { ups, clients, conn } = await Api.status.status()
+		for (const item of clients){
+			const cfg = state.configures.find(x => x.id === item.id)
+			if (!cfg) continue
+			cfg.status = true
+			cfg.address = item.address
+			cfg.region = item.region
+		}
+		state.ups = ups
+		for (const item of state.list){
+			const list = conn.filter(x => x.localPort === item.map!.inetPort)
+			if (list.length < 1) {
+				item.children = []
+				continue
+			}
+			item.children = list.map(x => { return { id: x.id, conn: x, children: [] } })
+		}
+	}catch {
+		for (const item of state.configures){
+			item.status = false
+		}
 	}
 }
 
 onMounted(function (){
 	reloadClient()
-	setInterval(reloadConfigureStatus, 5000)
+	setInterval(reloadConfigureStatus, 1000)
 })
 
 
@@ -83,6 +95,7 @@ async function saveConfigure(configure: IConfigure, title: string) {
 		const res = await Api.configure.save(configure)
 		if (res){
 			ElMessage.success(title + '成功')
+			state.dialogVisible = false
 			await reloadClient()
 			return
 		}
@@ -90,50 +103,37 @@ async function saveConfigure(configure: IConfigure, title: string) {
 	ElMessage.error(title + '失败')
 }
 
-async function onEnable(row: IProxyMappingInfo){
-	const configure = state.configures.find(x => x.id === row.configureId)
-	if (!configure) return
-	row.enable = !row.enable
-	configure.proxyMappings = state.list.filter(x => x.configureId === row.configureId && x.id !== row.id)
-	configure.proxyMappings.push(row)
-	await saveConfigure(configure, '修改状态')
-}
-
-function onEdit(row: IProxyMappingInfo){
-	state.config = state.configures.find(x => x.id === row.configureId)
-	state.form = JSON.parse(JSON.stringify(row))
-	nextTick(() => nameRef.value.focus())
-}
-
 function onSubmit(){
-	if (!state.config) return
-	if (state.list.filter(x => x.inetPort === state.form.inetPort).length > 1){
+	if (!state.form.configureId){
+		return ElMessage.error('请选择客户端')
+	}
+	if (state.list.filter(x => x.map!.inetPort === state.form.inetPort).length > 0){
 		return ElMessage.error('监听端口已被占用')
 	}
 	if (!state.form.lan) {
-		return ElMessage.error('后端地址不可为空')
+		return ElMessage.error('转发地址不可为空')
 	}
 	if (state.form.lan.split(':').length !== 2) {
-		return ElMessage.error('后端地址格式错误')
+		return ElMessage.error('转发地址格式错误')
 	}
+	const config = state.configures.find(x => x.id === state.form.configureId)!
 	if (state.form.id === 0){
-		if (state.list.find(x => x.name === state.form.name)){
-			return ElMessage.error('已存在同名代码')
-		}
 		state.form.id = Date.now()
 	}else {
-		state.config.proxyMappings = state.config.proxyMappings.filter(x => x.id !== state.form.id)
+		config.proxyMappings = config.proxyMappings.filter(x => x.id !== state.form.id)
 	}
 	delete (state.form as any)['configureId']
-	state.config.proxyMappings.push(state.form)
-	saveConfigure(state.config, '保存代理配置')
+	config.proxyMappings.push(state.form)
+	saveConfigure(config, '保存代理配置')
 }
 
-function onDelete(row: IProxyMappingInfo){
-	const cfg = state.configures.find(x => x.id === row.configureId)
-	if (!cfg) return
-	cfg.proxyMappings = cfg.proxyMappings.filter(x => x.id !== row.id)
-	saveConfigure(cfg, '删除代理配置')
+async function onDelete(row: IProxyItem){
+	if (!row.conf) return
+	if (!await confirm('是否确认删除当前代理?', '删除代理')){
+		return
+	}
+	row.conf.proxyMappings = row.conf.proxyMappings.filter(x => x.id !== row.map!.id)
+	await saveConfigure(row.conf, '删除代理配置')
 }
 
 async function addClient() {
@@ -153,11 +153,31 @@ async function addClient() {
 	}catch {}
 }
 
-function onSelectClient(client: IConfigure | undefined){
-	state.config = client
-	if (!client) {
-		onCancel()
-	}
+async function addProxy(){
+	onCancel()
+	state.dialogVisible = true
+}
+
+function onCopyProxy(row: IProxyItem) {
+	state.form = JSON.parse(JSON.stringify(row.map))
+	state.form.inetPort = getPort(state.form.inetPort)
+	state.form.id = 0
+	state.dialogVisible = true
+}
+
+function onEditProxy(row: IProxyItem){
+	state.form = JSON.parse(JSON.stringify(row.map))
+	state.dialogVisible = true
+}
+
+async function onEnable(row: IProxyItem){
+	const conf = row.conf
+	if (!conf) return
+	row.map!.enable = !row.map!.enable
+	delete (row.map as any)['configureId']
+	conf.proxyMappings = conf.proxyMappings.filter(x => x.id !== row.map!.id) as any
+	conf.proxyMappings.push(row.map!)
+	await saveConfigure(conf, '修改状态')
 }
 
 function copy(text: string): void {
@@ -166,11 +186,11 @@ function copy(text: string): void {
 		document.body.appendChild(input)
 		input.value = text
 		input.select()
-		let res = document.execCommand('copy')
-		document.body.removeChild(input)
-		if (res) {
+		// noinspection JSDeprecatedSymbols
+		if (document.execCommand('copy')) {
 			ElMessage.success('已复制到剪切板')
 		}
+		document.body.removeChild(input)
 	} catch (e) {
 	}
 }
@@ -232,94 +252,191 @@ async function onCommand(cfg: IConfigure, cmd: string){
 	}
 }
 
+async function forceClose(id: string){
+	if (!await confirm('是否强制关闭当前选择连接?', '强制关闭')){
+		return
+	}
+	if (await Api.forceClose(id)){
+		ElMessage.success('该连接至多10秒内会被结束')
+	}else {
+		ElMessage.error('关闭连接失败')
+	}
+}
+
+function isNotInBlack(row: IConnect) {
+	return !state.black.find(x => x.ip === row.remoteIp)
+}
+
+async function addBlock(row: IConnect) {
+	if (state.black.find(x => x.ip === row.remoteIp)) return
+	if (!await confirm(`是否确定将${ row.remoteIp }加入黑名单，加入后，该地址的所有连接都将被服务端拒绝`, '加入黑名单')){
+		return
+	}
+	if (await Api.black.save({ ip: row.remoteIp, time: Date.now(), enable: true, address: row.region })){
+		ElMessage.success('添加黑名单成功')
+		await reloadClient()
+	} else {
+		ElMessage.error('添加黑名单失败')
+	}
+}
+
 </script>
 
 <template>
 	<div class="proxy-header">
-		<div class="logo">
-			Node Proxy
+		<div class="logo">Node Proxy</div>
+	</div>
+	<div class="proxy-content">
+		<div class="client-list">
+			<span style="color: #787878;">客户端列表：</span>
+			<template v-for="item in state.configures" :key="item.name">
+				<el-dropdown trigger="click" :hide-timeout="50" @command="cmd => onCommand(item, cmd)">
+					<el-tag :class="{ conn: item.status }" class="client-tag state"  type="info" effect="plain" size="medium" onselectstart="return false">
+						{{ item.name }} {{ item.address ? '(' + item.address + ')' : '' }}
+					</el-tag>
+					<template #dropdown>
+						<el-dropdown-menu>
+							<el-dropdown-item command="copyKey">复制密钥</el-dropdown-item>
+							<el-dropdown-item divided></el-dropdown-item>
+							<el-dropdown-item command="rename">重命名</el-dropdown-item>
+							<el-dropdown-item command="reGenerateKey">重新生成密钥</el-dropdown-item>
+							<el-dropdown-item divided></el-dropdown-item>
+							<el-dropdown-item command="delete">删除客户端</el-dropdown-item>
+						</el-dropdown-menu>
+					</template>
+				</el-dropdown>
+			</template>
+			<el-button type="primary" @click="addClient">添加客户端</el-button>
+			<el-button type="primary" @click="addProxy" :disabled="state.configures.length < 1">添加代理</el-button>
+		</div>
+		<div class="list">
+			<el-tabs v-model="state.activeName" type="card">
+				<el-tab-pane name="proxy">
+					<template #label>
+						<el-icon>
+							<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 6.243V2h-4.243l1.411 1.41l-4.834 4.835a3.938 3.938 0 0 0-5.191 2.75H5.72a2 2 0 1 0 .005 2H8.14a3.94 3.94 0 0 0 5.204 2.757l4.83 4.83L16.758 22H21v-4.243l-1.41 1.411l-4.571-4.57a3.967 3.967 0 0 0 .841-1.603L18 13v2l3-3l-3-3v2l-2.143-.005a3.968 3.968 0 0 0-.844-1.6l4.57-4.57zM12 14a2 2 0 1 1 2-2a2 2 0 0 1-2 2z" fill="currentColor"></path></svg>
+						</el-icon>
+						<span style="margin-left: 5px;">代理列表</span>
+					</template>
+				</el-tab-pane>
+				<el-tab-pane name="history">
+					<template #label>
+						<el-icon>
+							<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13.5 8H12v5l4.28 2.54l.72-1.21l-3.5-2.08V8M13 3a9 9 0 0 0-9 9H1l3.96 4.03L9 12H6a7 7 0 0 1 7-7a7 7 0 0 1 7 7a7 7 0 0 1-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42A8.896 8.896 0 0 0 13 21a9 9 0 0 0 9-9a9 9 0 0 0-9-9" fill="currentColor"></path></svg>
+						</el-icon>
+						<span style="margin-left: 5px;">流量历史</span>
+					</template>
+				</el-tab-pane>
+				<el-tab-pane name="black">
+					<template #label>
+						<el-icon>
+							<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M1.41 1.69L0 3.1l1 .99V18h9v2H8v2h8v-2h-2v-2h.9l6 6l1.41-1.41l-20.9-20.9zM2.99 16V6.09L12.9 16H2.99zM4.55 2l2 2H21v12h-2.45l2 2h2.44V2z" fill="currentColor"></path></svg>
+						</el-icon>
+						<span style="margin-left: 5px;">黑名单</span>
+					</template>
+				</el-tab-pane>
+			</el-tabs>
+			<div style="width: 100%; height: calc(100% - 80px)">
+				
+				<el-table v-if="state.activeName === 'proxy'" :data="state.list" height="100%"
+					border highlight-current-row row-key="id" default-expand-all>
+					
+					<el-table-column type="index" label="序号" align="center" width="50"></el-table-column>
+					<el-table-column label="连接信息">
+						<template #default="{ row }">
+							<span v-if="row.map" style="font-size: 14px" class="state" :class="{ conn: state.ups.includes(row.map.inetPort) }">
+								客户端
+								<span v-if="row.conf.region"> [{{ row.conf.region }}] </span>
+								<span v-if="row.conf.address"> {{ row.conf.address }} </span> {{ row.conf.name }}
+								监听端口: {{ row.map.inetPort }} 转发至 {{ row.map.lan }}，
+								当前连接: {{ row.children.length }}
+								<span v-if="row.map.info">, 备注：{{ row.map.info }}</span>
+							</span>
+							<span v-else style="font-size: 14px;">
+								<el-icon :size="16"><Link /></el-icon>
+								<span v-if="row.conn.region"> [{{ row.conn.region }}] </span>
+								{{ row.conn.remoteIp }}: {{ row.conn.remotePort }}
+								于 {{ formatTime(row.conn.timestamp) }} 连接，
+								已持续 {{ calcTime(row.conn.timestamp) }}，
+								当前流量: ↑ {{ bytesToSize(row.conn.up) }} / ↓ {{ bytesToSize(row.conn.down) }}
+							</span>
+						</template>
+					</el-table-column>
+					<el-table-column label="操作" align="center" width="250">
+						<template #default="{ row }">
+							<div v-if="row.map">
+								<el-button type="text" @click="onEnable(row)" :style="{ color: row.map.enable ? '#E6A23C' : '#67C23A' }">
+									{{ row.map.enable ? '禁用' : '启用' }}
+								</el-button>
+								<el-button type="text" @click="onEditProxy(row)">编辑</el-button>
+								<el-button type="text" @click="onCopyProxy(row)">复制</el-button>
+								<el-button type="text" style="color: #F56C6C;" @click="onDelete(row)">删除</el-button>
+							</div>
+							<div v-else>
+								<el-button type="text" v-if="isNotInBlack(row.conn)" @click='addBlock(row.conn)'>加入黑名单</el-button>
+								<el-button type="text" style="color: #F56C6C;" @click='forceClose(row.conn.id)'>强制关闭</el-button>
+							</div>
+						</template>
+					</el-table-column>
+				</el-table>
+				<connect-view v-else-if="state.activeName === 'history'"></connect-view>
+				<black-view v-else></black-view>
+			</div>
 		</div>
 	</div>
-	<div class="proxy-client-list">
-		<span style="color: #787878;">客户端列表：</span>
-		<el-tag class="client-tag main" :class="{ select: !state.config }" type="info" effect="plain" size="medium"
-		        @click="onSelectClient(undefined)" onselectstart="return false">
-			全部 ({{ state.configures.length }})
-		</el-tag>
-		<template v-for="item in state.configures" :key="item.name">
-			<el-dropdown trigger="click" :hide-timeout="50" @command="cmd => onCommand(item, cmd)">
-				<el-tag :class="{ select: state.config && state.config?.key === item.key, conn: item.status }"
-				        class="client-tag"  type="info" effect="plain" size="medium"
-				        @click.stop="onSelectClient(item)"  onselectstart="return false">
-					{{ item.name }} {{ item.address ? '(' + item.address + ')' : '' }}
-				</el-tag>
-				<template #dropdown>
-					<el-dropdown-menu>
-						<el-dropdown-item command="copyKey">复制密钥</el-dropdown-item>
-						<el-dropdown-item divided></el-dropdown-item>
-						<el-dropdown-item command="rename">重命名</el-dropdown-item>
-						<el-dropdown-item command="reGenerateKey">重新生成密钥</el-dropdown-item>
-						<el-dropdown-item divided></el-dropdown-item>
-						<el-dropdown-item command="delete">删除客户端</el-dropdown-item>
-					</el-dropdown-menu>
-				</template>
-			</el-dropdown>
-		</template>
-		<el-button type="primary" @click="addClient">添加客户端</el-button>
-	</div>
-	<div class="proxy-left">
-		<el-tabs model-value='lan'>
-			<el-tab-pane label="代理列表" name="lan"></el-tab-pane>
-		</el-tabs>
-		<el-form :inline="true" :model="state.form" :disabled="!state.config" style='height: 50px;'>
-			<el-form-item label="代理名称">
-				<el-input v-model="state.form.name" placeholder="请输入代理名称" ref="nameRef" style="width: 180px;"></el-input>
+	<el-dialog v-model="state.dialogVisible" :title="state.form.id ? '编辑代理' : '添加代理'" width="450px" custom-class="shell-dialog" center>
+		<el-form :model="state.form" label-width="100px" @submit.prevent>
+			<el-form-item label="客户端">
+				<el-select v-model.number="state.form.configureId" placeholder="请选择客户端" style="width: 100%;">
+					<el-option v-for="item in state.configures" :key="item.id" :value="item.id" :label="item.name"/>
+				</el-select>
 			</el-form-item>
-			<el-form-item label="外网端口">
-				<el-input v-model="state.form.inetPort" placeholder="请输入外网端口" style="width: 80px;"></el-input>
+			<el-form-item label="监听端口">
+				<el-input-number v-model="state.form.inetPort" controls-position="right" :min="1" :max="65535"/>
 			</el-form-item>
-			<el-form-item label="后端地址">
-				<el-input v-model="state.form.lan" placeholder="格式: 127.0.0.1:8080" style="width: 180px;"></el-input>
+			<el-form-item label="转发地址">
+				<el-input v-model="state.form.lan" placeholder="格式: 127.0.0.1:8080，支持域名"></el-input>
 			</el-form-item>
-			<el-form-item>
-				<el-button type="primary" @click="onSubmit">{{ state.form.id === 0 ? '添加' : '修改' }}</el-button>
-				<el-button v-if="state.form.id > 0" @click="onCancel">取消</el-button>
+			<el-form-item label="备注">
+				<el-input v-model="state.form.info" placeholder="备注"></el-input>
 			</el-form-item>
 		</el-form>
-		<div style="width: 100%; height: calc(100% - 105px)">
-			<el-table :data="filterList" style="width: 100%" height="100%" border highlight-current-row size="mini" ref="tableRef">
-				<el-table-column type="index" label="序号" align="center" width="50"></el-table-column>
-				<el-table-column prop="name" label="代理名称" align="center" width="180"/>
-				<el-table-column prop="inetPort" label="外网端口" align="center" width="80"/>
-				<el-table-column prop="lan" label="后端地址" align="center"></el-table-column>
-				<el-table-column label="操作" align="center" width="150">
-					<template #default="{ row }">
-						<el-button type="text" @click="onEnable(row)" :style="{ color: row.enable ? '#E6A23C' : '#67C23A' }">
-							{{ row.enable ? '禁用' : '启用' }}
-						</el-button>
-						<el-button type="text" @click="onEdit(row)">编辑</el-button>
-						<el-button type="text" style="color: #F56C6C;" @click="onDelete(row)">删除</el-button>
-					</template>
-				</el-table-column>
-			</el-table>
-		</div>
-	</div>
-	<div class="proxy-right">
-		<right-statistics></right-statistics>
-	</div>
+		<template #footer>
+			<span class="dialog-footer">
+				<el-button @click="state.dialogVisible = false">取消</el-button>
+				<el-button type="primary" @click="onSubmit">{{ state.form.id === 0 ? '添加' : '修改' }}</el-button>
+			</span>
+		</template>
+	</el-dialog>
 </template>
+
+<style lang="scss">
+.shell-dialog {
+	border-radius: 15px;
+
+	& .el-dialog__header {
+		  border-bottom: 1px solid rgba(204, 204, 204, 0.25);
+	  }
+	
+	& .el-dialog__footer {
+		  border-top: 1px solid rgba(204, 204, 204, 0.25);
+		  padding-bottom: 10px;
+	  }
+}
+</style>
 
 <style lang="scss" scoped>
 	.proxy-header {
-		position: absolute; top: 0; height: 60px;left: 0; right: 0; background-color: #23262E;
+		height: 60px; background-color: #23262E; position: relative;
 		.logo { position: absolute;left: 0;top: 0;width: 200px;height: 100%;line-height: 60px;text-align: center;color: #409EFF;font-size: 20px; }
 	}
 	
-	.proxy-client-list {position: absolute; top: 65px; left: 0; right: 0; overflow: hidden; margin: 10px;}
-	
-	.proxy-left {position: absolute; top: 100px; bottom: 0; left: 0; width: calc(50% - 20px); overflow: hidden; margin: 10px;}
-	
-	.proxy-right {position: absolute; top: 100px; bottom: 0; right: 0; width: calc(50% - 20px); overflow: hidden; margin: 10px;}
+	.proxy-content {
+		height: calc(100% - 60px); overflow: hidden; margin: 10px;
+		
+		.client-list { height: 40px; line-height: 40px; margin-bottom: 10px;}
+		.list { width: 100%; height: calc(100% - 50px); overflow: hidden;}
+	}
 
 	@-webkit-keyframes fade {
 		from { opacity: 1.0; }
@@ -335,7 +452,9 @@ async function onCommand(cfg: IConfigure, cmd: string){
 		-webkit-user-select:none;
 		user-select:none;
 		-moz-user-select: none;
-		
+	}
+	
+	.state {
 		&::before{
 			-webkit-animation:fade 1500ms infinite;
 			content: "";

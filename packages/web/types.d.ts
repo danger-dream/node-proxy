@@ -8,14 +8,22 @@ export declare interface IBlack {
 
 export declare interface IProxyMapping {
 	id?: number
-	name: string
 	inetPort: number
 	lan: string
 	enable: boolean
+	info: string
 }
 
 export declare interface IProxyMappingInfo extends IProxyMapping{
-	configureId: number
+	configureId?: number
+}
+
+export declare interface IProxyItem {
+	id: number | string
+	map?: IProxyMappingInfo
+	conf?: IConfigure
+	conn?: IConnect
+	children: IProxyItem[]
 }
 
 export declare interface IConfigure {
@@ -25,6 +33,7 @@ export declare interface IConfigure {
 	proxyMappings: IProxyMapping[]
 	status?: boolean
 	address?: string
+	region?: string
 }
 
 export declare interface ISystem {
@@ -33,50 +42,15 @@ export declare interface ISystem {
 	overseas: boolean
 }
 
-export interface IMetrics {
-	label: string
-	localPort: number
-	lan: string
-	up: number
-	down: number
-	connectNum: number
-	children: IMetricsConnect[]
-}
-
-export interface IMetricsConnect {
-	label: string
-	remoteAddr: string
+export declare interface IConnect {
+	id: string
+	remoteIp: string
 	remotePort: number
 	localPort: number
-	lan: string
 	up: number
 	down: number
 	timestamp: number
+	endTime: number
+	region: string
 	status: boolean
-	clientId: string
-	address: string
-}
-
-export interface IMetricsIP {
-	label: string
-	remoteAddr: string
-	up: number
-	down: number
-	connectNum: number
-	address: string
-	children: IMetricsIPConnect[]
-}
-
-export interface IMetricsIPConnect {
-	label: string
-	remoteAddr: string
-	remotePort: number
-	localPort: number
-	lan: string
-	up: number
-	down: number
-	timestamp: number
-	status: boolean
-	clientId: string
-	address: string
 }

@@ -76,7 +76,7 @@ export class TcpServerClient extends EventEmitter {
 			const self = this
 			this.closeTimeout = setTimeout(function(){
 				try {
-					!self.socket.destroyed && self.socket.destroy()
+					self.socket.destroy()
 				}catch {}
 			}, 1000 * 10)
 		}catch {}

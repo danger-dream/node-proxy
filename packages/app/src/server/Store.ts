@@ -5,7 +5,7 @@ import { IBlack, IConfigure, ISystem } from '../../types'
 import { TcpServerClient } from './TcpServerClient'
 import UserProxyServer from './UserProxyServer'
 import { Server } from 'net'
-import Metrics from './Metrics'
+import Connect from './Connect'
 import { init, ip2region } from '../common/ip2region'
 import { UUID } from '../common/Utils'
 
@@ -20,7 +20,7 @@ export default class Store {
 	
 	userProxyServer = new UserProxyServer(this)
 	
-	metrics = new Metrics(storePath, this)
+	connect = new Connect(storePath, this)
 	
 	proxyServerMap = {} as Record<number, Server>
 

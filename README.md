@@ -71,6 +71,13 @@ Examles:
  $ node-proxy -d -s -c -P 80 -p 6900 -k 123456
 ```
 
+## images
+
+<img src="./images/proxy-list.png" />
+
+<img src="./images/history.png" />
+
+
 
 #### 离线IP库下载：
 1. [geolite2](https://dev.maxmind.com/geoip/geolite2-free-geolocation-data)

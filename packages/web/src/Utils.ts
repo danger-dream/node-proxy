@@ -42,10 +42,10 @@ export function formatTime(shijianchuo: any) {
 	return y + '-' + add0(m) + '-' + add0(d) + ' ' + add0(h) + ':' + add0(mm) + ':' + add0(s);
 }
 
-export function calcTime(time: string): string {
+export function calcTime(time: string | number, endTime?: number | string): string {
 	if (!time) return ''
 	const start = new Date(time)
-	const dt = Date.now() - start.getTime()
+	const dt = (endTime ? new Date(endTime).getTime() : Date.now()) - start.getTime()
 	const days = Math.floor(dt / (24 * 3600 * 1000))
 	const leave1 = dt % (24 * 3600 * 1000)
 	const hours = Math.floor(leave1 / (3600 * 1000))

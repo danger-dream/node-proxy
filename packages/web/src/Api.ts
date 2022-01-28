@@ -1,5 +1,5 @@
 import axios from "axios";
-import { IConfigure, ISystem, IBlack, IMetrics, IMetricsIP } from '../types'
+import { IConfigure, ISystem, IBlack, IConnect } from '../types'
 
 function getQueryVariable(variable: string): string {
 	const query = window.location.search.substring(1);
@@ -67,28 +67,11 @@ export default {
 		}
 	},
 	status: {
-		async configure(): Promise<{ id: number, address: string }[]>{
-			return await post('/status/configure')
+		async status(): Promise<{ ups: number[], clients: {id: number, address: string, region: string}[], conn: IConnect[] }>{
+			return await post('/status')
 		},
-		async metrics(): Promise<IMetrics[]>{
-			const res = await post('/status/metrics') as IMetrics[]
-			for (const item of res){
-				item.label = item.localPort + ' -> ' + item.lan
-				for (const sub of item.children){
-					sub.label = `[${ sub.address }]${ sub.remoteAddr }:${ sub.remotePort }`
-				}
-			}
-			return res
-		},
-		async metricsIp(): Promise<IMetricsIP[]>{
-			const res = await post('/status/metricsIp') as IMetricsIP[]
-			for (const item of res){
-				item.label = '[' + item.address + ']' + item.remoteAddr
-				for (const sub of item.children){
-					sub.label = `${ sub.remotePort } -> ${ sub.localPort } -> ${ sub.lan }`
-				}
-			}
-			return res
+		async getAll(): Promise<IConnect[]> {
+			return await post('/statusAll')
 		}
 	},
 	async forceClose(id: string): Promise<boolean>{

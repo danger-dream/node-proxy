@@ -18,7 +18,7 @@ export default class UserProxyServer {
 				return
 			}
 			const client = new TcpServerClient(socket, false)
-			self.store.metrics.bindClient(client, proxy)
+			self.store.connect.bindClient(client, proxy)
 			client.onClose(function(){
 				delete self.clientMap[client.id]
 			})
@@ -31,7 +31,6 @@ export default class UserProxyServer {
 		})
 		server.listen(proxy.inetPort, '0.0.0.0', function() {
 			self.store.proxyServerMap[proxy.inetPort] = server
-			console.log('开始监听代理端口:' + proxy.inetPort)
 		})
 	}
 
